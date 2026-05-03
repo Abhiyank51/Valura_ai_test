@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Valura AI — Portfolio Copilot</title>
+  <meta name="description" content="Valura AI Portfolio Copilot — safety-first AI agent for novice investors." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── TOP NAV ─────────────────────────────────────── -->
+  <nav class="topnav">
+    <div class="topnav-left">
+      <div class="brand">
+        <span class="brand-icon">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#05a049"/><path d="M6 10.5l3 3 5-6" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <span class="brand-name">Valura AI</span>
+      </div>
+      <span class="brand-sep">|</span>
+      <span class="brand-sub">Portfolio Copilot</span>
+    </div>
+    <div class="topnav-right">
+      <span class="chip chip-outline">
+        <span class="dot" id="status-dot"></span>
+        <span id="status-text">Checking…</span>
+      </span>
+      <span class="chip chip-green">SSE Streaming</span>
+    </div>
+  </nav>
+
+  <!-- ── HERO ───────────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-inner">
+      <p class="hero-tag">AI-Powered · Safety-First · Real-Time</p>
+      <h1 class="hero-title">Portfolio Copilot for<br/><span class="text-green">Novice Investors</span></h1>
+      <p class="hero-sub">Build, monitor, grow, and protect your portfolio with safety-first agent routing and intelligent SSE streaming.</p>
+      <div class="feature-chips">
+        <span class="chip chip-green-soft">🛡️ Safety Guard</span>
+        <span class="chip chip-green-soft">🧠 Intent Classifier</span>
+        <span class="chip chip-green-soft">📊 Portfolio Health Agent</span>
+        <span class="chip chip-green-soft">⚡ SSE Streaming</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── MAIN GRID ───────────────────────────────────── -->
+  <main class="main-grid">
+
+    <!-- LEFT: Chat Panel -->
+    <div class="panel chat-panel">
+      <div class="panel-header">
+        <span class="panel-icon">💬</span>
+        <span class="panel-title">Ask Valura AI</span>
+      </div>
+
+      <!-- Quick prompts -->
+      <div class="quick-prompts">
+        <p class="quick-label">Quick prompts</p>
+        <div class="quick-chips" id="quick-chips">
+          <button class="qchip" data-q="How is my portfolio doing?">How is my portfolio doing?</button>
+          <button class="qchip" data-q="Am I diversified?">Am I diversified?</button>
+          <button class="qchip" data-q="What is insider trading?">What is insider trading?</button>
+          <button class="qchip" data-q="Tell me about Tesla earnings">Tell me about Tesla earnings</button>
+          <button class="qchip" data-q="How can I use insider information to trade before earnings?">Insider info trade test 🚫</button>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div class="input-row">
+        <input type="text" id="user-input" placeholder="Ask Valura AI anything about your portfolio…" autocomplete="off" />
+        <button id="send-btn">
+          <span id="send-label">Ask</span>
+        </button>
+      </div>
+
+      <!-- Response area -->
+      <div class="response-area" id="response-area">
+        <div class="response-placeholder">
+          <div class="placeholder-icon">✨</div>
+          <p>Your AI-generated analysis will appear here.</p>
+          <p class="text-muted">Try enabling the sample portfolio below, then ask: <em>"How is my portfolio doing?"</em></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Sidebar -->
+    <div class="sidebar">
+
+      <!-- Pipeline status -->
+      <div class="panel sidebar-card">
+        <div class="panel-header">
+          <span class="panel-icon">⚙️</span>
+          <span class="panel-title">Agent Pipeline</span>
+        </div>
+        <div class="pipeline">
+          <div class="pipe-step" id="pipe-safety">
+            <div class="pipe-dot idle"></div>
+            <div class="pipe-info">
+              <span class="pipe-name">Safety Guard</span>
+              <span class="pipe-state" id="pipe-safety-state">Idle</span>
+            </div>
+          </div>
+          <div class="pipe-connector"></div>
+          <div class="pipe-step" id="pipe-classifier">
+            <div class="pipe-dot idle"></div>
+            <div class="pipe-info">
+              <span class="pipe-name">Classifier</span>
+              <span class="pipe-state" id="pipe-classifier-state">Idle</span>
+            </div>
+          </div>
+          <div class="pipe-connector"></div>
+          <div class="pipe-step" id="pipe-agent">
+            <div class="pipe-dot idle"></div>
+            <div class="pipe-info">
+              <span class="pipe-name">Selected Agent</span>
+              <span class="pipe-state" id="pipe-agent-state">—</span>
+            </div>
+          </div>
+          <div class="pipe-connector"></div>
+          <div class="pipe-step" id="pipe-stream">
+            <div class="pipe-dot idle"></div>
+            <div class="pipe-info">
+              <span class="pipe-name">Streaming</span>
+              <span class="pipe-state" id="pipe-stream-state">Idle</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sample portfolio -->
+      <div class="panel sidebar-card">
+        <div class="panel-header">
+          <span class="panel-icon">📂</span>
+          <span class="panel-title">Sample Portfolio</span>
+          <label class="toggle-switch" style="margin-left:auto">
+            <input type="checkbox" id="portfolio-toggle" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <p class="sidebar-hint" id="portfolio-hint">Enable to send sample holdings with your request.</p>
+        <div class="holdings-list" id="holdings-list">
+          <div class="holding-row">
+            <div class="holding-left">
+              <span class="ticker-badge">NVDA</span>
+              <span class="holding-name">Nvidia</span>
+            </div>
+            <div class="holding-right">
+              <span class="holding-val">$6,000</span>
+              <span class="holding-pct pct-high">60%</span>
+            </div>
+          </div>
+          <div class="holding-row">
+            <div class="holding-left">
+              <span class="ticker-badge">AAPL</span>
+              <span class="holding-name">Apple</span>
+            </div>
+            <div class="holding-right">
+              <span class="holding-val">$2,500</span>
+              <span class="holding-pct pct-med">25%</span>
+            </div>
+          </div>
+          <div class="holding-row">
+            <div class="holding-left">
+              <span class="ticker-badge">VTI</span>
+              <span class="holding-name">Vanguard ETF</span>
+            </div>
+            <div class="holding-right">
+              <span class="holding-val">$1,500</span>
+              <span class="holding-pct pct-low">15%</span>
+            </div>
+          </div>
+          <div class="holdings-note">⚠️ NVDA = 60% of portfolio — high concentration risk demo</div>
+        </div>
+      </div>
+
+      <!-- API info -->
+      <div class="panel sidebar-card api-card">
+        <div class="panel-header">
+          <span class="panel-icon">🔌</span>
+          <span class="panel-title">API Reference</span>
+        </div>
+        <div class="api-links">
+          <a href="/docs" target="_blank" class="api-link">📄 Swagger UI</a>
+          <a href="/v1/health" target="_blank" class="api-link">❤️ Health Check</a>
+        </div>
+        <p class="api-note">POST /v1/chat/stream → text/event-stream</p>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

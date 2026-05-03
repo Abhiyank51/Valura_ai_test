@@ -1,0 +1,95 @@
+import re
+from src.core.schemas import SafetyVerdict
+
+class SafetyGuard:
+    def __init__(self):
+        # Specific allowed queries that might otherwise trigger filters
+        self.exact_allowlist = [
+            r"what is insider trading", 
+            r"why is insider trading illegal", 
+            r"explain insider trading risks",
+            r"what is a pump and dump scheme",
+            r"why are guaranteed returns risky"
+        ]
+
+        # Broad educational prefixes
+        self.educational_prefixes = [
+            r"^what is\b", r"^what are\b", r"^explain\b", r"^difference between\b", 
+            r"^how does\b", r"^how should\b", r"^are .* legal\b", r"^role in\b", 
+            r"^historical average\b", r"^why are\b", r"^describe the\b", 
+            r"^what's the difference\b"
+        ]
+        
+        # Action words that invalidate educational overrides (unless in exact allowlist)
+        self.enabling_action_words = [
+            r"\buse\b", r"\bexploit\b", r"\bhide\b", r"\bbypass\b", 
+            r"\bavoid reporting\b", r"\btrade before\b", r"\bprofit from\b", 
+            r"\bmanipulate\b", r"\bcoordinate\b", r"\bstructure deposits\b", 
+            r"\blaunder\b", r"\bevade\b", r"\bfake\b", r"\bguarantee\b", 
+            r"\bguaranteed way\b", r"\bdouble money\b"
+        ]
+
+        self.harmful_patterns = {
+            "insider_trading": [
+                r"use insider information", r"insider information to trade", 
+                r"non-public information", r"material nonpublic information", 
+                r"trade before earnings", r"before earnings using inside info",
+                r"unannounced acquisition", r"tip about earnings", r"confidential merger", r"earnings before tomorrow"
+            ],
+            "market_manipulation": [r"pump up", r"coordinated buying", r"wash trade between", r"create volume", r"pump and dump"],
+            "money_laundering": [r"without reporting", r"structure deposits", r"layer my trades", r"hide trading profits"],
+            "guaranteed_returns": [r"guarantee me", r"double in a year", r"100% certain", r"foolproof way"],
+            "reckless_advice": [r"put all my retirement", r"margin loan to buy", r"entire emergency fund", r"mortgage my house"],
+            "sanctions_evasion": [r"bypass ofac", r"without it being traced"],
+            "fraud": [r"fake contract"]
+        }
+
+    def _is_educational(self, query_lower: str) -> bool:
+        # Exact allowlist always passes
+        for pat in self.exact_allowlist:
+            if re.search(pat, query_lower):
+                return True
+
+        # Check broad educational prefixes
+        is_edu_prefix = any(re.search(pat, query_lower) for pat in self.educational_prefixes)
+        
+        if is_edu_prefix:
+            # But invalidate if it contains enabling action words
+            has_action_word = any(re.search(pat, query_lower) for pat in self.enabling_action_words)
+            if not has_action_word:
+                return True
+                
+        return False
+
+    def check(self, query: str) -> SafetyVerdict:
+        query_lower = query.lower().strip()
+
+        # Check for educational queries first
+        if self._is_educational(query_lower):
+            return SafetyVerdict(blocked=False, category="safe")
+
+        # Check harmful patterns
+        for category, patterns in self.harmful_patterns.items():
+            for pat in patterns:
+                if re.search(pat, query_lower):
+                    message = self._get_message_for_category(category)
+                    return SafetyVerdict(blocked=True, category=category, message=message)
+
+        return SafetyVerdict(blocked=False, category="safe")
+        
+    def _get_message_for_category(self, category: str) -> str:
+        messages = {
+            "insider_trading": "I can’t help with insider trading or using non-public information to trade. I can help explain legal alternatives such as public-market research, diversification, and risk management.",
+            "market_manipulation": "I cannot participate in market manipulation or coordinated trading schemes.",
+            "money_laundering": "I cannot provide advice on avoiding reporting requirements or money laundering.",
+            "guaranteed_returns": "I cannot guarantee returns. All investments carry risk.",
+            "reckless_advice": "I cannot provide reckless financial advice or encourage over-leveraging.",
+            "sanctions_evasion": "I cannot assist with evading sanctions.",
+            "fraud": "I cannot assist with fraudulent activities."
+        }
+        return messages.get(category, "I cannot fulfill this request due to safety policies.")
+
+guard = SafetyGuard()
+
+def check(query: str) -> SafetyVerdict:
+    return guard.check(query)
