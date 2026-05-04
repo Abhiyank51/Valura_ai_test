@@ -74,7 +74,7 @@ a:hover { text-decoration: underline; }
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 11px;
+  padding: -1px 11px;
   border-radius: 20px;
   font-size: 0.78rem;
   font-weight: 500;
