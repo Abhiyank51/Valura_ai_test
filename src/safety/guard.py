@@ -34,28 +34,52 @@ class SafetyGuard:
                 r"use insider information", r"insider information to trade", 
                 r"non-public information", r"material nonpublic information", 
                 r"trade before earnings", r"before earnings using inside info",
-                r"unannounced acquisition", r"tip about earnings", r"confidential merger", r"earnings before tomorrow"
+                r"unannounced acquisition", r"tip about earnings", r"confidential merger", r"earnings before tomorrow",
+                r"inside info", r"insider tip", r"trade on confidential", r"non public info", r"material non-public",
+                r"earnings leak", r"leaked earnings", r"unreleased earnings", r"insider trading"
             ],
-            "market_manipulation": [r"pump up", r"coordinated buying", r"wash trade between", r"create volume", r"pump and dump"],
-            "money_laundering": [r"without reporting", r"structure deposits", r"layer my trades", r"hide trading profits"],
-            "guaranteed_returns": [r"guarantee me", r"double in a year", r"100% certain", r"foolproof way"],
-            "reckless_advice": [r"put all my retirement", r"margin loan to buy", r"entire emergency fund", r"mortgage my house"],
+            "market_manipulation": [
+                r"pump up", r"coordinated buying", r"wash trade between", r"create volume", r"pump and dump",
+                r"pump the price", r"dump after pumping", r"spoof orders", r"fake volume", r"wash trading",
+                r"coordinated pump", r"manipulate volume", r"manipulate price"
+            ],
+            "money_laundering": [
+                r"without reporting", r"structure deposits", r"layer my trades", r"hide trading profits",
+                r"avoid reporting", r"avoid kyc", r"bypass kyc", r"hide source of funds", r"clean dirty money",
+                r"layer transactions", r"structure transactions", r"split deposits", r"avoid detection"
+            ],
+            "guaranteed_returns": [
+                r"guarantee me", r"double in a year", r"100% certain", r"foolproof way",
+                r"guaranteed profit", r"risk free profit", r"risk-free profit", r"guaranteed return",
+                r"no risk return", r"double my money", r"double money", r"sure shot return", r"guaranteed way"
+            ],
+            "reckless_advice": [
+                r"put all my retirement", r"margin loan to buy", r"entire emergency fund", r"mortgage my house",
+                r"all in", r"put everything", r"use emergency fund", r"borrow to invest", r"take a loan to buy",
+                r"margin loan", r"retirement savings into"
+            ],
             "sanctions_evasion": [r"bypass ofac", r"without it being traced"],
-            "fraud": [r"fake contract"]
+            "fraud": [
+                r"fake contract", r"fake statement", r"fake proof of funds", r"forge", r"forged", r"fake kyc"
+            ]
         }
 
     def _is_educational(self, query_lower: str) -> bool:
-        # Exact allowlist always passes
+        has_action_word = any(re.search(pat, query_lower) for pat in self.enabling_action_words)
+        query_clean = re.sub(r'[^\w\s]', '', query_lower).strip()
+
+        # Exact allowlist always passes (must match fully and have no action words)
         for pat in self.exact_allowlist:
-            if re.search(pat, query_lower):
-                return True
+            # check fullmatch against cleaned query to ignore punctuation
+            if re.fullmatch(pat, query_clean) or re.fullmatch(pat, query_lower):
+                if not has_action_word:
+                    return True
 
         # Check broad educational prefixes
         is_edu_prefix = any(re.search(pat, query_lower) for pat in self.educational_prefixes)
         
         if is_edu_prefix:
             # But invalidate if it contains enabling action words
-            has_action_word = any(re.search(pat, query_lower) for pat in self.enabling_action_words)
             if not has_action_word:
                 return True
                 

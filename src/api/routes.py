@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import time
 from pathlib import Path
 from fastapi import APIRouter, Request
 from sse_starlette.sse import EventSourceResponse
@@ -24,17 +25,28 @@ def load_user_fixture(user_id: str) -> dict:
     Load user fixture from several candidate locations.
     Never crashes — returns {} if nothing is found.
     """
-    candidates = [
-        _PROJECT_ROOT / "fixtures" / "user_profiles" / f"{user_id}.json",
-        _PROJECT_ROOT / "fixtures" / "users" / f"{user_id}.json",
-        _PROJECT_ROOT / "fixtures" / f"{user_id}.json",
+    candidates_dirs = [
+        _PROJECT_ROOT / "fixtures" / "user_profiles",
+        _PROJECT_ROOT / "fixtures" / "users",
+        _PROJECT_ROOT / "fixtures",
     ]
-    for path in candidates:
-        if path.exists():
+    # 1. exact matches
+    for dir_path in candidates_dirs:
+        exact_path = dir_path / f"{user_id}.json"
+        if exact_path.exists():
             try:
-                return json.loads(path.read_text(encoding="utf-8"))
+                return json.loads(exact_path.read_text(encoding="utf-8"))
             except Exception:
-                logger.warning("Could not parse fixture at %s", path)
+                logger.warning("Could not parse fixture at %s", exact_path)
+    # 2. prefix matches
+    for dir_path in candidates_dirs:
+        if dir_path.exists():
+            matches = sorted(dir_path.glob(f"{user_id}*.json"))
+            for match in matches:
+                try:
+                    return json.loads(match.read_text(encoding="utf-8"))
+                except Exception:
+                    logger.warning("Could not parse fixture at %s", match)
     return {}
 
 
@@ -54,6 +66,8 @@ async def chat_stream(request: Request, body: ChatRequest):
     session_key = body.session_id or user_id
 
     async def event_generator():
+        start_time = time.perf_counter()
+        
         # ── 1. Safety Guard (synchronous, always first) ───────────────────
         safety_verdict = safety_check(query)
         if safety_verdict.blocked:
@@ -65,8 +79,24 @@ async def chat_stream(request: Request, body: ChatRequest):
                     "message": safety_verdict.message,
                 })
             }
+            elapsed_ms = round((time.perf_counter() - start_time) * 1000)
+            yield {
+                "data": json.dumps({
+                    "type": "metrics",
+                    "total_elapsed_ms": elapsed_ms,
+                    "timeout_seconds": PIPELINE_TIMEOUT_SECONDS
+                })
+            }
             yield {"data": "[DONE]"}
             return
+            
+        yield {
+            "data": json.dumps({
+                "type": "metadata",
+                "status": "pipeline_started",
+                "message": "Request accepted. Classifying intent..."
+            })
+        }
 
         # ── 2. Classify + Route (with pipeline timeout) ───────────────────
         async def _pipeline():
@@ -89,6 +119,14 @@ async def chat_stream(request: Request, body: ChatRequest):
                     "message": "The request timed out. Please try again with a shorter query.",
                 })
             }
+            elapsed_ms = round((time.perf_counter() - start_time) * 1000)
+            yield {
+                "data": json.dumps({
+                    "type": "metrics",
+                    "total_elapsed_ms": elapsed_ms,
+                    "timeout_seconds": PIPELINE_TIMEOUT_SECONDS
+                })
+            }
             yield {"data": "[DONE]"}
             return
         except Exception:
@@ -97,6 +135,14 @@ async def chat_stream(request: Request, body: ChatRequest):
                 "data": json.dumps({
                     "type": "error",
                     "message": "The request could not be processed safely. Please try again.",
+                })
+            }
+            elapsed_ms = round((time.perf_counter() - start_time) * 1000)
+            yield {
+                "data": json.dumps({
+                    "type": "metrics",
+                    "total_elapsed_ms": elapsed_ms,
+                    "timeout_seconds": PIPELINE_TIMEOUT_SECONDS
                 })
             }
             yield {"data": "[DONE]"}
@@ -116,6 +162,15 @@ async def chat_stream(request: Request, body: ChatRequest):
             "data": json.dumps({
                 "type": "agent_response",
                 "payload": agent_response,
+            })
+        }
+
+        elapsed_ms = round((time.perf_counter() - start_time) * 1000)
+        yield {
+            "data": json.dumps({
+                "type": "metrics",
+                "total_elapsed_ms": elapsed_ms,
+                "timeout_seconds": PIPELINE_TIMEOUT_SECONDS
             })
         }
 

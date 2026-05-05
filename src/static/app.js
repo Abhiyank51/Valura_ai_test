@@ -114,8 +114,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (p.concentration_risk) {
       const cr = p.concentration_risk;
       const flag = (cr.flag || 'low').toLowerCase();
-      const riskClass = flag === 'high' ? 'risk-high' : flag === 'medium' ? 'risk-medium' : 'risk-low';
-      const flagIcon  = flag === 'high' ? '🔴' : flag === 'medium' ? '🟡' : '🟢';
+      const riskClass = flag === 'high' ? 'risk-high' : flag === 'moderate' ? 'risk-medium' : 'risk-low';
+      const flagIcon  = flag === 'high' ? '🔴' : flag === 'moderate' ? '🟡' : '🟢';
 
       const card = el('div', 'resp-card');
       card.innerHTML = `<div class="resp-card-title">Concentration Risk</div>
@@ -286,6 +286,21 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (parsed.type === 'error') {
               setPipe('safety', 'fail', 'Error');
               aiBubble.appendChild(renderError(parsed));
+              hasContent = true;
+              
+            } else if (parsed.type === 'metadata') {
+              setPipe('safety', 'pass', 'Passed ✓');
+              setPipe('classifier', 'running', 'Classifying…');
+              // No response card generated
+              
+            } else if (parsed.type === 'metrics') {
+              const metricsFooter = el('div', 'resp-metrics', `⏱️ Completed in ${parsed.total_elapsed_ms} ms`);
+              metricsFooter.style.fontSize = '0.75rem';
+              metricsFooter.style.color = '#66736b';
+              metricsFooter.style.marginTop = '0.75rem';
+              aiBubble.appendChild(metricsFooter);
+              // No "hasContent = true" needed if it just adds the footer to an existing layout,
+              // but we can set it to true so it doesn't show "No response received."
               hasContent = true;
             }
 

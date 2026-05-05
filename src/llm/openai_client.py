@@ -1,4 +1,3 @@
-import json
 from typing import AsyncGenerator
 from openai import AsyncOpenAI
 from src.config import settings

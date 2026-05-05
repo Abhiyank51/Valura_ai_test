@@ -1,5 +1,7 @@
 # Valura AI Portfolio Copilot
 
+# Access the dashboard -- https://valura-ai-test.onrender.com/
+
 ## 1. Project Overview
 Valura AI is a backend microservice that serves as an AI co-investor for novice users. It provides an intelligent ecosystem of specialized agents capable of parsing intent, safely interacting with user queries, and streaming real-time guidance directly into an SSE client dashboard.
 
@@ -77,13 +79,57 @@ The system is designed with a specific agent taxonomy:
 - **8 Seconds**: A strict 8-second `asyncio.wait_for` timeout wraps the Classifier and Agent execution. 8 seconds was chosen as it provides sufficient time for a modern LLM (gpt-4o-mini) to return a structured JSON response while preventing the SSE connection from hanging indefinitely on network stalls.
 - If timeout occurs, the system yields a graceful `type: "error"` event.
 
-## 13. Cost and Performance Strategy
-- **Local Safety**: Bouncing harmful queries locally saves LLM tokens and latency.
-- **Model Selection**: Defaults to `gpt-4o-mini` for fast, cost-effective development. Evaluation or production can be switched to `gpt-4.1` via `.env`.
-- **Token Limits**: Uses `max_tokens=700` for LLM calls to prevent runaway generation costs.
-- **Single Classifier Call**: Intent mapping and entity extraction are performed in a single structured prompt to minimize roundtrips.
+## 13. Model Behavior
+- **Development model**: `gpt-4o-mini`
+- **Evaluation model**: `gpt-4.1` by setting `OPENAI_MODEL=gpt-4.1`
+- **Tests/no-key mode**: Uses `FakeLLMClient`
+- **Real OpenAI**: Used only when `OPENAI_API_KEY` is set and `APP_ENV` is not `test`.
 
-## 14. Setup Instructions
+## 14. One Classifier LLM Call
+- The Safety Guard is local and runs first.
+- If safe, the classifier makes exactly one structured LLM call.
+- `PortfolioHealthAgent` is deterministic and does not call an LLM.
+- Stub agents do not call an LLM.
+
+## 15. Streaming Approach
+- The service streams pipeline events over SSE.
+- It is event-level SSE streaming, not OpenAI token streaming.
+- Supported Events:
+  - `metadata`
+  - `classifier`
+  - `agent_response`
+  - `safety`
+  - `error`
+  - `metrics`
+  - `[DONE]`
+
+## 16. Performance Measurement
+- Immediate `metadata` event is used to keep first SSE event latency low.
+- `total_elapsed_ms` is emitted in the `metrics` event.
+- Local measurement methods:
+  - `curl -N` against `/v1/chat/stream`
+  - Browser network timing
+  - `pytest` runtime
+- Targets:
+  - p95 first SSE event < 2s
+  - p95 end-to-end < 6s
+- Hard timeout:
+  - 8 seconds to avoid hanging requests.
+
+## 17. Cost Strategy
+- One model call per safe request: classifier only.
+- Local safety guard avoids unnecessary LLM calls.
+- Deterministic `PortfolioHealthAgent` avoids additional model calls.
+- Unimplemented agents are stubs and do not call LLM.
+- `max_tokens=700`
+- `gpt-4o-mini` default for development.
+- `gpt-4.1` configurable for evaluation.
+- Expected `gpt-4.1` cost stays under $0.05/query because the prompt is compact and the output is structured JSON.
+
+## 18. Deployment Note
+The live Render deployment is hosted from a mirror repository because the GitHub Classroom repository is private/restricted for Render access. The official GitHub Classroom repository contains the full incremental commit history and final source code.
+
+## 19. Setup Instructions
 
 1. **Create and activate a virtual environment:**
    ```bash
@@ -104,31 +150,31 @@ The system is designed with a specific agent taxonomy:
    cp .env.example .env
    ```
 
-## 15. Environment Variables
+## 20. Environment Variables
 - `OPENAI_API_KEY`: Your OpenAI API key.
 - `OPENAI_MODEL`: Model choice (defaults to `gpt-4o-mini`).
 - `APP_ENV`: Environment (e.g., `development`, `production`).
 - `DATABASE_URL`: Connection string (if implemented later).
 
-## 16. Run Instructions
+## 21. Run Instructions
 Start the FastAPI application:
 ```bash
 uvicorn src.main:app --reload
 ```
 
-## 17. Test Instructions
+## 22. Test Instructions
 Tests run safely without requiring an OpenAI key:
 ```bash
 pytest tests/ -v
 ```
 *(Tests use a `FakeLLMClient` deterministic classifier in no-key mode. The real `OpenAILLMClient` is used when `OPENAI_API_KEY` is present).*
 
-## 18. Dashboard Instructions
+## 23. Dashboard Instructions for local run
 A polished, Valura-themed frontend dashboard is available at:
 - `http://127.0.0.1:8000/`
 - `http://127.0.0.1:8000/dashboard`
 
-## 19. API Examples
+## 24. API Examples
 To test the SSE API manually:
 ```bash
 curl -N -X POST http://127.0.0.1:8000/v1/chat/stream \
@@ -136,18 +182,18 @@ curl -N -X POST http://127.0.0.1:8000/v1/chat/stream \
      -d '{"message": "How is my portfolio doing?", "user_id": "usr_001", "session_id": "test_session"}'
 ```
 
-## 20. Non-obvious Decisions
+## 25. Non-obvious Decisions
 - **Fake Client Fixture Matching**: The `FakeLLMClient` parses test queries and strictly maps them against `fixtures/test_queries/intent_classification.json`. This ensures the CI pipeline perfectly evaluates routing logic without flakiness.
 
-## 21. Tradeoffs
+## 26. Tradeoffs
 - **In-memory store**: Tradeoff made for simplicity of assignment deployment. In production, this would be swapped for Redis.
 - **Rule-based Safety Guard**: RegExp-based safety is extremely fast but brittle compared to an LLM-based guardrail. To offset this, the prompt classifier also includes an informational safety verdict layer.
 
-## 22. Future Improvements
+## 27. Future Improvements
 - Implement the remaining 9 specialized agents.
 - Replace in-memory history with Redis.
 - Integrate real-time market data API for accurate benchmark returns.
 - Upgrade Safety Guard with an embedded, quantized local model for semantic harm detection.
 
-## 23. Defence Video
+## 28. Defence Video
 Defence video: <ADD_UNLISTED_VIDEO_LINK_HERE>
